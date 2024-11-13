@@ -40,4 +40,7 @@ func main() {
 	pb.RegisterImagePDFServiceServer(grpcServer, new(Server))
 
 	log.Printf("starting server on %s", lsn.Addr().String())
+	if err := grpcServer.Serve(lsn); err != nil {
+		log.Fatal(err)
+	}
 }
