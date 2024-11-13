@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package pdfcompose;
+option go_package = "./;pb";
+
+service ImagePDFService {
+  rpc UploadImages (ImageUploadRequest) returns (PDFResponse);
+}
+
+message Image {
+  bytes content = 1;
+  string filename = 2;
+}
+
+message ImageUploadRequest {
+  repeated Image images = 1;
+}
+
+message PDFResponse {
+  bytes pdf_content = 1;
+}
