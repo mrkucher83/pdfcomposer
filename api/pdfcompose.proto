@@ -9,7 +9,6 @@ service ImagePDFService {
 
 message Image {
   bytes content = 1;
-  string filename = 2;
 }
 
 message ImageUploadRequest {
