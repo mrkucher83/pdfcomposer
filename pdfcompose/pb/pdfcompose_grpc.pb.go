@@ -26,7 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ImagePDFServiceClient interface {
-	UploadImages(ctx context.Context, in *ImageUploadRequest, opts ...grpc.CallOption) (*PDFResponse, error)
+	UploadImages(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Chunk, PDFResponse], error)
 }
 
 type imagePDFServiceClient struct {
@@ -37,21 +37,24 @@ func NewImagePDFServiceClient(cc grpc.ClientConnInterface) ImagePDFServiceClient
 	return &imagePDFServiceClient{cc}
 }
 
-func (c *imagePDFServiceClient) UploadImages(ctx context.Context, in *ImageUploadRequest, opts ...grpc.CallOption) (*PDFResponse, error) {
+func (c *imagePDFServiceClient) UploadImages(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Chunk, PDFResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PDFResponse)
-	err := c.cc.Invoke(ctx, ImagePDFService_UploadImages_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &ImagePDFService_ServiceDesc.Streams[0], ImagePDFService_UploadImages_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &grpc.GenericClientStream[Chunk, PDFResponse]{ClientStream: stream}
+	return x, nil
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ImagePDFService_UploadImagesClient = grpc.ClientStreamingClient[Chunk, PDFResponse]
 
 // ImagePDFServiceServer is the server API for ImagePDFService service.
 // All implementations must embed UnimplementedImagePDFServiceServer
 // for forward compatibility.
 type ImagePDFServiceServer interface {
-	UploadImages(context.Context, *ImageUploadRequest) (*PDFResponse, error)
+	UploadImages(grpc.ClientStreamingServer[Chunk, PDFResponse]) error
 	mustEmbedUnimplementedImagePDFServiceServer()
 }
 
@@ -62,8 +65,8 @@ type ImagePDFServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedImagePDFServiceServer struct{}
 
-func (UnimplementedImagePDFServiceServer) UploadImages(context.Context, *ImageUploadRequest) (*PDFResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UploadImages not implemented")
+func (UnimplementedImagePDFServiceServer) UploadImages(grpc.ClientStreamingServer[Chunk, PDFResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method UploadImages not implemented")
 }
 func (UnimplementedImagePDFServiceServer) mustEmbedUnimplementedImagePDFServiceServer() {}
 func (UnimplementedImagePDFServiceServer) testEmbeddedByValue()                         {}
@@ -86,23 +89,12 @@ func RegisterImagePDFServiceServer(s grpc.ServiceRegistrar, srv ImagePDFServiceS
 	s.RegisterService(&ImagePDFService_ServiceDesc, srv)
 }
 
-func _ImagePDFService_UploadImages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ImageUploadRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ImagePDFServiceServer).UploadImages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ImagePDFService_UploadImages_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ImagePDFServiceServer).UploadImages(ctx, req.(*ImageUploadRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+func _ImagePDFService_UploadImages_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ImagePDFServiceServer).UploadImages(&grpc.GenericServerStream[Chunk, PDFResponse]{ServerStream: stream})
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ImagePDFService_UploadImagesServer = grpc.ClientStreamingServer[Chunk, PDFResponse]
 
 // ImagePDFService_ServiceDesc is the grpc.ServiceDesc for ImagePDFService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -110,12 +102,13 @@ func _ImagePDFService_UploadImages_Handler(srv interface{}, ctx context.Context,
 var ImagePDFService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "pdfcompose.ImagePDFService",
 	HandlerType: (*ImagePDFServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "UploadImages",
-			Handler:    _ImagePDFService_UploadImages_Handler,
+			StreamName:    "UploadImages",
+			Handler:       _ImagePDFService_UploadImages_Handler,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "pdfcompose.proto",
 }

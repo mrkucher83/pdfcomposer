@@ -4,17 +4,13 @@ package pdfcompose;
 option go_package = "./;pb";
 
 service ImagePDFService {
-  rpc UploadImages (ImageUploadRequest) returns (PDFResponse);
+  rpc UploadImages (stream Chunk) returns (PDFResponse) {}
 }
 
-message Image {
-  bytes content = 1;
-}
-
-message ImageUploadRequest {
-  repeated Image images = 1;
+message Chunk {
+  bytes Content = 1;
 }
 
 message PDFResponse {
-  bytes pdf_content = 1;
+  bytes Pdf_content = 1;
 }
