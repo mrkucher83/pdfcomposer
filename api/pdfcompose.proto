@@ -9,6 +9,7 @@ service ImagePDFService {
 
 message Chunk {
   bytes Content = 1;
+  bool Is_last_chunk = 2;
 }
 
 message PDFResponse {

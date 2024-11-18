@@ -10,6 +10,8 @@ import (
 	"net"
 )
 
+const chunkSize = 128 * 1024
+
 type Server struct {
 	pb.UnimplementedImagePDFServiceServer
 }
@@ -29,24 +31,27 @@ type Server struct {
 //	return &pb.PDFResponse{PdfContent: pdf.Bytes()}, nil
 //}
 
-func (s *Server) UploadImages(stream pb.ImagePDFService_UploadImagesServer) (err error) {
-	var fileBuff []byte
+func (s *Server) UploadImages(stream pb.ImagePDFService_UploadImagesServer) error {
+	fileBuff := make([]byte, 0, chunkSize)
 	var rcs []io.ReadCloser
 	for {
-		res, err := stream.Recv()
-		if err != nil {
-			if err == io.EOF {
-				goto END
-			}
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
 
-			log.Printf("failed unexpectadely while reading chunkd form stream: %v", err)
+		if err != nil {
+			log.Printf("failed unexpectadely while reading chunkd from stream: %v", err)
 			return err
 		}
-		fileBuff = append(fileBuff, res.Content...)
+
+		fileBuff = append(fileBuff, chunk.Content...)
+		if chunk.IsLastChunk {
+			rcs = append(rcs, io.NopCloser(bytes.NewReader(fileBuff)))
+		}
+		fileBuff = fileBuff[:0]
 	}
 
-END:
-	rcs = append(rcs, io.NopCloser(bytes.NewReader(fileBuff)))
 	pdf, err := composer.ComposeFromFiles(rcs)
 	if err != nil {
 		return err
