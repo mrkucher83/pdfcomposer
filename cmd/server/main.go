@@ -10,8 +10,6 @@ import (
 	"net"
 )
 
-const chunkSize = 128 * 1024
-
 type Server struct {
 	pb.UnimplementedImagePDFServiceServer
 }
@@ -32,7 +30,7 @@ type Server struct {
 //}
 
 func (s *Server) UploadImages(stream pb.ImagePDFService_UploadImagesServer) error {
-	fileBuff := make([]byte, 0, chunkSize)
+	var fileBuff []byte
 	var rcs []io.ReadCloser
 	for {
 		chunk, err := stream.Recv()
@@ -48,8 +46,8 @@ func (s *Server) UploadImages(stream pb.ImagePDFService_UploadImagesServer) erro
 		fileBuff = append(fileBuff, chunk.Content...)
 		if chunk.IsLastChunk {
 			rcs = append(rcs, io.NopCloser(bytes.NewReader(fileBuff)))
+			fileBuff = []byte{}
 		}
-		fileBuff = fileBuff[:0]
 	}
 
 	pdf, err := composer.ComposeFromFiles(rcs)
