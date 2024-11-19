@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/mrkucher83/pdfcomposer/pdfcompose/pb"
 	"github.com/mrkucher83/pdfcomposer/pkg/composer"
 	"google.golang.org/grpc"
@@ -69,11 +70,37 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(logFileSizeInterceptor)))
 	pb.RegisterImagePDFServiceServer(grpcServer, new(Server))
 
 	log.Printf("starting server on %s", lsn.Addr().String())
 	if err := grpcServer.Serve(lsn); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func logFileSizeInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	stream := &wrappedServerStream{ServerStream: ss}
+
+	err := handler(srv, stream)
+	if err != nil {
+		return err
+	}
+	log.Printf("Total file size received: %d bytes", stream.totalSize)
+	return nil
+}
+
+type wrappedServerStream struct {
+	grpc.ServerStream
+	totalSize int64
+}
+
+func (w *wrappedServerStream) RecvMsg(m interface{}) error {
+	err := w.ServerStream.RecvMsg(m)
+	if err == nil {
+		if chunk, ok := m.(*pb.Chunk); ok {
+			w.totalSize += int64(len(chunk.Content))
+		}
+	}
+	return err
 }
