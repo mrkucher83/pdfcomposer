@@ -8,10 +8,10 @@ service ImagePDFService {
 }
 
 message Chunk {
-  bytes Content = 1;
-  bool Is_last_chunk = 2;
+  bytes content = 1;
+  bool is_last_chunk = 2;
 }
 
 message PDFResponse {
-  bytes Pdf_content = 1;
+  bytes pdf_content = 1;
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/mrkucher83/pdfcomposer/pdfcompose/pb"
 	"github.com/mrkucher83/pdfcomposer/pkg/composer"
@@ -35,11 +36,10 @@ func (s *Server) UploadImages(stream pb.ImagePDFService_UploadImagesServer) erro
 	var rcs []io.ReadCloser
 	for {
 		chunk, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			log.Printf("failed unexpectadely while reading chunkd from stream: %v", err)
 			return err
 		}
